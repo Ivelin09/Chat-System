@@ -1,0 +1,6 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/ivelin/Desktop/Chat/app'
+make: Leaving directory '/home/ivelin/Desktop/Chat/app'
+ 
+make: *** No targets specified and no makefile found.  Stop.
+
