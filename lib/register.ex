@@ -17,16 +17,17 @@ defmodule Register do
   end
 
   def resource_exists(req, state) do
+    IO.inspect(:cowboy_req.path(req))
     case :cowboy_req.method(req) do
       "POST" ->
         {_, body, _Req} = :cowboy_req.read_body(req)
         content = Poison.decode!(body)
         IO.inspect(content)
         respond = Mnesia_storage.register(content["name"], content["email"], content["password"])
-        {:stop, :cowboy_req.reply(202, :cowboy_req.set_resp_body("token: \"#{respond.token}\" ", req)), State}
+        {:stop, :cowboy_req.reply(202, :cowboy_req.set_resp_body("token: \"#{respond.token}\" ", req)), state}
 
       _ ->
-        {:stop, :cowboy_req.reply(202, :cowboy_req.set_resp_body("No one to handle", req)), State}
+        {:stop, :cowboy_req.reply(202, :cowboy_req.set_resp_body("No one to handle", req)), state}
       end
   end
 

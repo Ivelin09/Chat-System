@@ -29,7 +29,7 @@ defmodule Mnesia_storage do
     end
   end
 
-  def accept_request(username, friend) do
+  def accept_friend_request(username, friend) do
       user_obj = User.read!(username)
       friend_obj = User.read!(friend)
 
@@ -39,6 +39,15 @@ defmodule Mnesia_storage do
 
         %{friend_obj | friend_list: MapSet.put(friend_obj.friend_list, user_obj.username)}
       end
+  end
+
+  def deny_friend_request(username, friend) do
+    user_obj = User.read!(username)
+    friend_obj = User.read!(friend)
+
+    Amnesia.transaction do
+      %{user_obj | pending_invites: MapSet.delete(user_obj.pending_invites, friend_obj.username)} |> User.write
+    end
   end
 
   def generate_token() do
