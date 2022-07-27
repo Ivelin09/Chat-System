@@ -13,7 +13,8 @@ defmodule Server do
       { :_,
         [
           {"/register", Elixir.Register, []},
-          {"/login", Elixir.Login, []}
+          {"/login", Elixir.Login, []},
+          {"/friend_request", Elixir.Friend_Request, []}
         ]}
     ])
   end

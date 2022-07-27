@@ -20,6 +20,26 @@ defmodule Mnesia_storage do
     end
   end
 
+  def friend_request(sender, recipient) do
+    sender_obj = User.read!(sender)
+    recipient_obj = User.read!(recipient)
+
+    Amnesia.transaction do
+      %{recipient_obj | pending_invites: MapSet.put(recipient_obj.pending_invites, sender_obj.username)} |> User.write()
+    end
+  end
+
+  def accept_request(username, friend) do
+      user_obj = User.read!(username)
+      friend_obj = User.read!(friend)
+
+      Amnesia.transaction do
+        %{user_obj | friend_list: MapSet.put(user_obj.friend_list, friend_obj.username),
+          pending_invites: MapSet.delete(user_obj.pending_invites, friend_obj.username)} |> User.write
+
+        %{friend_obj | friend_list: MapSet.put(friend_obj.friend_list, user_obj.username)}
+      end
+  end
 
   def generate_token() do
     :base64.encode(:crypto.strong_rand_bytes(32))
