@@ -21,8 +21,7 @@ defmodule Friend_Request do
         path = :cowboy_req.path(req)
         IO.inspect(content)
         cond do
-          path == "/friend_request" ->
-            Mnesia_storage.friend_request(content["sender"], content["recipient"])
+          path == "/friend_request" -> Mnesia_storage.friend_request(content["sender"], content["recipient"])
           path == "/friend_request/deny" -> Mnesia_storage.deny_friend_request(content["sender"], content["recipient"])
           path == "/friend_request/accept" -> Mnesia_storage.accept_friend_request(content["sender"], content["recipient"])
           path == "/friend_request/deny" -> Mnesia_storage.deny_friend_request(content["sender"], content["recipient"])

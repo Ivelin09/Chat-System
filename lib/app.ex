@@ -3,8 +3,12 @@ defmodule Mnesia_storage do
   require Amnesia
   require Amnesia.Helper
   require Database.User
+  require Database.Chat
 
   alias Database.User
+  alias Database.Chat
+
+  alias Amnesia.Seletion
 
   def start_link() do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -29,6 +33,16 @@ defmodule Mnesia_storage do
     end
   end
 
+  def create_chat(username, friend_username) do
+    Amnesia.transaction do
+      %Chat{name: "#{username} #{friend_username}", participations: [username, friend_username]} |> Chat.write
+    end
+  end
+
+  def get do
+    Chat.match!(particitions: "iv jr").values
+  end
+
   def accept_friend_request(username, friend) do
       user_obj = User.read!(username)
       friend_obj = User.read!(friend)
@@ -37,8 +51,9 @@ defmodule Mnesia_storage do
         %{user_obj | friend_list: MapSet.put(user_obj.friend_list, friend_obj.username),
           pending_invites: MapSet.delete(user_obj.pending_invites, friend_obj.username)} |> User.write
 
-        %{friend_obj | friend_list: MapSet.put(friend_obj.friend_list, user_obj.username)}
+        %{friend_obj | friend_list: MapSet.put(friend_obj.friend_list, user_obj.username)} |> User.write
       end
+      create_chat(username, friend)
   end
 
   def deny_friend_request(username, friend) do
@@ -50,6 +65,20 @@ defmodule Mnesia_storage do
     end
   end
 
+  def send_message(sender, recipient, message) do
+
+    chat_obj = Chat.read!("#{sender} #{recipient}")
+    chat_obj = if chat_obj == nil, do: Chat.read!("#{recipient} #{sender}"), else: chat_obj
+    IO.inspect("#{sender} #{recipient}")
+    Amnesia.transaction do
+      %{chat_obj | messages: [ %Message{user_id: sender, content: message, send_time: Time.utc_now()} | chat_obj.messages] } |> Chat.write
+    end
+  end
+
+  def load_chat(chat_name) do
+    Chat.read!(chat_name)
+  end
+
   def generate_token() do
     :base64.encode(:crypto.strong_rand_bytes(32))
   end
@@ -57,7 +86,8 @@ defmodule Mnesia_storage do
   def register(name, mail, pass) do
     token = generate_token()
     Amnesia.transaction do
-        %User{username: name, email: mail, password: pass, failed_login_attemps: 0, available_time: Time.utc_now(), auth_token: token} |> User.write()
+        %User{username: name, email: mail, password: pass, failed_login_attemps: 0,
+          available_time: Time.utc_now(), auth_token: token} |> User.write()
     end
     %{token: token} # RESPOND
   end
