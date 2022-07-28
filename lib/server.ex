@@ -15,6 +15,7 @@ defmodule Server do
           {"/register", Elixir.Register, []},
           {"/login", Elixir.Login, []},
           {"/friend_request", Elixir.Friend_Request, []},
+          {"/send_message", Elixir.Send_Message, []}
         ]}
     ])
   end

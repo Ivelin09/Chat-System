@@ -66,17 +66,22 @@ defmodule Mnesia_storage do
   end
 
   def send_message(sender, recipient, message) do
-
     chat_obj = Chat.read!("#{sender} #{recipient}")
     chat_obj = if chat_obj == nil, do: Chat.read!("#{recipient} #{sender}"), else: chat_obj
-    IO.inspect("#{sender} #{recipient}")
+
     Amnesia.transaction do
-      %{chat_obj | messages: [ %Message{user_id: sender, content: message, send_time: Time.utc_now()} | chat_obj.messages] } |> Chat.write
+      %{chat_obj | messages: [
+        %Message{user_id: sender, content: message, send_time: Time.utc_now()} | chat_obj.messages
+        ] } |> Chat.write
     end
   end
 
+  def getToken(username) do
+    User.read!(username).auth_token
+  end
+
   def load_chat(chat_name) do
-    Chat.read!(chat_name)
+    Chat.read!(chat_name).messages
   end
 
   def generate_token() do
