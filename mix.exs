@@ -14,7 +14,7 @@ defmodule App.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :corsica]
     ]
   end
 
@@ -27,7 +27,10 @@ defmodule App.MixProject do
       {:cowboy, "~> 2.7.0"},
       {:poison, "~> 5.0"},
       {:joken, "~> 2.0-rc0"},
-      {:crypto_rand, "~> 1.0.0"}
+      {:crypto_rand, "~> 1.0.0"},
+      {:cors_plug, "~> 3.0"},
+      {:plug, "~> 1.0"},
+      {:corsica, "~> 1.0"}
     ]
   end
 end
