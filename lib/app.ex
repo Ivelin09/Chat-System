@@ -35,12 +35,15 @@ defmodule Mnesia_storage do
 
   def create_chat(username, friend_username) do
     Amnesia.transaction do
-      %Chat{name: "#{username} #{friend_username}", participations: [username, friend_username]} |> Chat.write
+      %Chat{
+        name: "#{username} #{friend_username}",
+        participations:
+          [
+            %People{username: username, last_message_seen: false},
+            %People{username: friend_username, last_message_seen: false}
+          ]
+        } |> Chat.write
     end
-  end
-
-  def get do
-    Chat.match!(particitions: "iv jr").values
   end
 
   def accept_friend_request(username, friend) do
@@ -65,14 +68,106 @@ defmodule Mnesia_storage do
     end
   end
 
+  def log do
+    Mnesia_storage.register("iv", "@", "1")
+    Mnesia_storage.register("jr", "@", "1")
+    Mnesia_storage.friend_request("iv", "jr")
+    Mnesia_storage.accept_friend_request("jr", "iv")
+  end
+
+  def load_chat do
+    Chat.match!(name: "jr iv")
+  end
+
   def send_message(sender, recipient, message) do
     chat_obj = Chat.read!("#{sender} #{recipient}")
     chat_obj = if chat_obj == nil, do: Chat.read!("#{recipient} #{sender}"), else: chat_obj
 
     Amnesia.transaction do
       %{chat_obj | messages: [
-        %Message{user_id: sender, content: message, send_time: Time.utc_now()} | chat_obj.messages
+         %Message{user_id: sender, content: message, send_time: Time.utc_now()} | chat_obj.messages
         ] } |> Chat.write
+    end
+  end
+
+  def edit_message(chat_name, id, content) do
+    chat_obj = Chat.read!(chat_name)
+    message = Enum.at(chat_obj.messages, id)
+    cond do
+      Time.diff(Time.utc_now(), message.send_time, :second) > 60*60 ->
+        %{message: "You can edit message only within a minute"}
+      true ->
+      %{ chat_obj  | messages: List.update_at(chat_obj.messages, id, fn(x) ->
+          %{message | content: content}
+        end) } |> Chat.write!()
+      end
+  end
+
+  # Give a map with multiple fields and turn it to a list
+  defp map_to_list() do
+
+  end
+
+  defp isSeen(chat_obj, from) do
+    IO.inspect(Enum.map(chat_obj.participations, fn x -> x.last_message_seen end))
+    val = find_index(Enum.map(chat_obj.participations,
+      fn x ->
+        case x.username != from do
+          true ->
+            x.last_message_seen
+          false ->
+            true
+        end
+      end), false)
+    if val == -1, do: false, else: true
+  end
+
+  def get_friend_list(username), do: User.read!(username).friend_list
+
+  def get_friend_requests(username), do: User.read!(username).pending_invites
+
+  def remove_friend(client, friend) do
+    chat_obj = Chat.read!("#{client} #{friend}")
+    chat_obj = if chat_obj == nil, do: Chat.read!("#{friend} #{client}"), else: chat_obj
+
+    client_obj = User.read!(client)
+    friend_obj = User.read!(friend)
+
+    %{client_obj | friend_list: MapSet.delete(client_obj.friend_list, friend)} |> User.write!
+    %{friend_obj | friend_list: MapSet.delete(friend_obj.friend_list, client)} |> User.write!
+
+    Chat.delete!(chat_obj.name)
+  end
+
+  def unreaded_messages(user) do
+    Amnesia.transaction do
+      Chat.foldl(0,
+      fn (rec, accm) ->
+        {_chat, _chatName, participations, messages} = rec
+        case Enum.any?(participations, &(&1.username == user and &1.last_message_seen == false)) do
+          true ->
+            accm + Enum.reduce_while(messages, 0, fn (x,acc) ->
+              if x.user_id != user, do:
+                {:cont, acc + 1},
+              else:
+                {:halt, acc}
+            end)
+          false ->
+            accm
+        end
+      end)
+    end
+  end
+
+  def delete_message(chat_name, id) do
+    chat_obj = Chat.read!(chat_name)
+    message = Enum.at(chat_obj.messages, id)
+
+    case isSeen(chat_obj, message.user_id) do
+      true ->
+        %{message: "You can't delete message that had already been seen"}
+      false ->
+        %{chat_obj | messages: List.delete_at(chat_obj.messages, id)} |> Chat.write!
     end
   end
 
@@ -80,8 +175,43 @@ defmodule Mnesia_storage do
     User.read!(username).auth_token
   end
 
-  def load_chat(chat_name) do
-    Chat.read!(chat_name).messages
+  def read_users do
+    Amnesia.transaction do
+      User.foldl([], fn(rec, _Acc) -> IO.inspect(rec) end)
+    end
+  end
+  # mix amnesia.create -d Database --disk
+
+  defp find_index(arr, key) do
+    IO.inspect(arr)
+    IO.inspect(Enum.with_index(arr))
+    res = Enum.with_index((arr)) |>
+        Enum.filter_map(
+          fn {x, _} -> x == key end, fn {_, i} -> i
+        end)
+    if Enum.count(res) == 1 do
+        [k] = res
+        k
+     else
+       -1
+     end
+  end
+
+  def load_chat(username, chat_name) do
+      chat_obj = Chat.read!(chat_name)
+      IO.inspect(find_index(Chat.read!(chat_name).participations, username))
+      %{chat_obj | participations: List.update_at(
+        Chat.read!(chat_name).participations,
+        find_index(
+          Enum.map(chat_obj.participations,
+            fn x ->
+              x.username
+          end), username),
+            fn x ->
+              %People{username: x.username, last_message_seen: true}
+            end) } |> Chat.write!()
+    #%{Chat.read!(chat_name) | partitions: []}
+    #Chat.read!(chat_name).messages
   end
 
   def generate_token() do
@@ -109,28 +239,23 @@ defmodule Mnesia_storage do
       acc.password == pass -> "success"
       acc.failed_login_attemps == 3 ->
         Amnesia.transaction do
-          %User{
-            username: username,
-            email: acc.email,
-            password: acc.password,
+          %{ acc |
             failed_login_attemps: 0,
             available_time: Time.add(Time.utc_now(), 60000, :millisecond)
           } |> User.write()
         end
       true ->
         Amnesia.transaction do
-          %User{
-            username: username,
-            email: acc.email,
-            password: acc.password,
+          %{acc |
             failed_login_attemps: acc.failed_login_attemps+1,
             available_time: acc.available_time
-          } |> User.write()
+           } |> User.write()
         end
     end
 
 
   end
+
 
   def handle_cast({:attempted, pass}, _from, state) do
     Amnesia.transaction(

@@ -1,7 +1,11 @@
 use Amnesia
 
 defmodule Message do
-  defstruct user_id: nil, content: nil, send_time: nil
+  defstruct [:user_id, :content, :send_time]
+end
+
+defmodule People do
+  defstruct [:username, last_message_seen: false]
 end
 
 defdatabase Database do
@@ -23,8 +27,8 @@ defdatabase Database do
       Chat,
       [
         :name,
-        :participations,
-        messages: [Message]
+        participations: [%People{}],
+        messages: [%Message{}]
       ],
       type: :ordered_set
     )
