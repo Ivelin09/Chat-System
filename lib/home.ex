@@ -1,4 +1,4 @@
-defmodule Register do
+defmodule Home do
 
 
   require Mnesia_storage
@@ -32,7 +32,7 @@ defmodule Register do
     headers = [
       {<<"access-control-allow-origin">>, <<"*">>},
       {<<"access-control-allow-methods">>, <<"POST, GET, OPTIONS">>},
-      {<<"access-control-allow-headers">>, <<"Origin, X-Requested-With, Content-Type, Accept">>},
+      {<<"access-control-allow-headers">>, <<"Origin, X-Requested-With, Content-Type, Accept, Set-Cookie">>},
       {<<"access-control-max-age">>, <<"1000">>}
   ]
     {:ok, req2} = set_headers(headers, req)
@@ -40,18 +40,14 @@ defmodule Register do
   end
 
   def resource_exists(req, state) do
-
+    IO.inspect(".")
     case :cowboy_req.method(req) do
-      "POST" ->
-        {_, body, _Req} = :cowboy_req.read_body(req)
-        content = Poison.decode!(body)
-        respond = Mnesia_storage.register(content["username"], content["email"], content["password"])
-        req1 = :cowboy_req.set_resp_cookie(<<"token">>,
-          :base64.encode(:crypto.strong_rand_bytes(32)), req, %{:secure => true})
-        {:ok, req2, _} = options(req1, state)
-        {:stop, :cowboy_req.reply(202, :cowboy_req.set_resp_body(Poison.encode!(respond), req2)), state}
+      "GET" ->
+        IO.inspect(:cowboy_req.headers(req))
+        {:ok, req1, _} = options(req, state)
+        {:stop, :cowboy_req.reply(202, :cowboy_req.set_resp_body("", req1)), state}
       _ ->
-        IO.inspect("there")
+        IO.inspect("therea")
         {:stop, :cowboy_req.reply(202, :cowboy_req.set_resp_body("No one to handle", req)), state}
       end
   end
@@ -59,7 +55,6 @@ defmodule Register do
 
 
   def home(request, state) do
-    IO.inspect("asd")
     req1 = :cowboy_req.set_resp_header(<<"access-control-allow-methods">>, <<"GET, OPTIONS">>, request)
     req2 = :cowboy_req.set_resp_header(<<"access-control-allow-origin">>, <<"*">>, req1)
     {"home", req2, state}

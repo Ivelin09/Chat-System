@@ -75,10 +75,6 @@ defmodule Mnesia_storage do
     Mnesia_storage.accept_friend_request("jr", "iv")
   end
 
-  def load_chat do
-    Chat.match!(name: "jr iv")
-  end
-
   def send_message(sender, recipient, message) do
     chat_obj = Chat.read!("#{sender} #{recipient}")
     chat_obj = if chat_obj == nil, do: Chat.read!("#{recipient} #{sender}"), else: chat_obj
@@ -86,7 +82,13 @@ defmodule Mnesia_storage do
     Amnesia.transaction do
       %{chat_obj | messages: [
          %Message{user_id: sender, content: message, send_time: Time.utc_now()} | chat_obj.messages
-        ] } |> Chat.write
+        ], participations:  List.update_at(chat_obj.participations, find_index(Enum.map(chat_obj.participations,
+        fn x ->
+          x.username
+        end), sender), fn x ->
+          %{x | last_message_seen: true}
+        end)} |> Chat.write
+
     end
   end
 
@@ -103,9 +105,9 @@ defmodule Mnesia_storage do
       end
   end
 
-  # Give a map with multiple fields and turn it to a list
-  defp map_to_list() do
-
+  def authenticate_user(token) do
+    [res = {_, username, _, _, _, _, _, friendList,_}] = User.match!(auth_token: token).values
+    username
   end
 
   defp isSeen(chat_obj, from) do
@@ -116,13 +118,13 @@ defmodule Mnesia_storage do
           true ->
             x.last_message_seen
           false ->
-            true
+            false
         end
-      end), false)
+      end), true)
     if val == -1, do: false, else: true
   end
 
-  def get_friend_list(username), do: User.read!(username).friend_list
+  def get_friend_list(username), do: %{response: MapSet.to_list(User.read!(username).friend_list)}
 
   def get_friend_requests(username), do: User.read!(username).pending_invites
 
@@ -183,8 +185,6 @@ defmodule Mnesia_storage do
   # mix amnesia.create -d Database --disk
 
   defp find_index(arr, key) do
-    IO.inspect(arr)
-    IO.inspect(Enum.with_index(arr))
     res = Enum.with_index((arr)) |>
         Enum.filter_map(
           fn {x, _} -> x == key end, fn {_, i} -> i
@@ -210,8 +210,6 @@ defmodule Mnesia_storage do
             fn x ->
               %People{username: x.username, last_message_seen: true}
             end) } |> Chat.write!()
-    #%{Chat.read!(chat_name) | partitions: []}
-    #Chat.read!(chat_name).messages
   end
 
   def generate_token() do
@@ -235,8 +233,8 @@ defmodule Mnesia_storage do
 
     too_soon = Time.compare(acc.available_time, Time.utc_now)
     cond do
-      too_soon == :gt -> "you should WAIT"
-      acc.password == pass -> "success"
+      too_soon == :gt -> %{err: "You should wait"}
+      acc.password == pass -> %{token: acc.auth_token}
       acc.failed_login_attemps == 3 ->
         Amnesia.transaction do
           %{ acc |
@@ -244,26 +242,16 @@ defmodule Mnesia_storage do
             available_time: Time.add(Time.utc_now(), 60000, :millisecond)
           } |> User.write()
         end
+        %{err: "Too many requests"}
       true ->
         Amnesia.transaction do
           %{acc |
             failed_login_attemps: acc.failed_login_attemps+1,
             available_time: acc.available_time
            } |> User.write()
+        %{err: "wrong password or username"}
         end
     end
-
-
   end
 
-
-  def handle_cast({:attempted, pass}, _from, state) do
-    Amnesia.transaction(
-      User.read(state.username)
-    )
-  end
-
-  def handle_call(logout, _from, [head | tail]) do
-    {:reply, head, tail}
-  end
 end

@@ -1,38 +1,21 @@
-import './App.css'
-import { useState } from 'react'
+import ReactDOM from "react-dom/client";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-function App() {
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+import Register from './pages/register'
+import Home from './pages/home'
+import Login from './pages/login'
+import Friends from './pages/friends'
 
-
-  async function func() {
-    const res = await fetch("http://localhost:8080/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        username: name,
-        email: email, 
-        password: password
-      })
-    }).then((res) => res.json())
-
-    console.log(res)
-  }
+export default function App() {
   return (
-    <div className="App" color="color: black">
-      <p>Username</p>
-      <input type="text" name="username" onChange={(currName) => setName(currName.target.value)}/>
-      <p>email</p> 
-      <input type="text" name="email" onChange={(currEmail) => setEmail(currEmail.target.value)}/>
-      <p> password </p>
-      <input type="text" name="password" onChange={(currPassowrd) => setPassword(currPassowrd.target.value)}/>
-      <input  onClick={func} type="submit" value="submit"/> 
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/register" element={<Register />}/>
+        <Route path="/login" element={<Login/>}/>
+        <Route path="/home" element={<Home/>}/>
+        <Route path ="/friends" element={<Friends/>}/>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
-export default App;
