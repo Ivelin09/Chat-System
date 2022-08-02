@@ -1,0 +1,26 @@
+h2 {
+    padding: 3%;
+    border-bottom: 1px solid black;
+}
+
+.container {
+    font-family: monospace;
+    display: flex;
+}
+
+.item-1 {
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    flex: 3;
+    order: 2;
+}
+
+.item-2 {
+    flex: 1;
+    order: 2;
+}
+
+.item-3 {
+    flex: 1;
+    order: 1;
+}

@@ -68,13 +68,6 @@ defmodule Mnesia_storage do
     end
   end
 
-  def log do
-    Mnesia_storage.register("iv", "@", "1")
-    Mnesia_storage.register("jr", "@", "1")
-    Mnesia_storage.friend_request("iv", "jr")
-    Mnesia_storage.accept_friend_request("jr", "iv")
-  end
-
   def send_message(sender, recipient, message) do
     chat_obj = Chat.read!("#{sender} #{recipient}")
     chat_obj = if chat_obj == nil, do: Chat.read!("#{recipient} #{sender}"), else: chat_obj
@@ -126,7 +119,7 @@ defmodule Mnesia_storage do
 
   def get_friend_list(username), do: %{response: MapSet.to_list(User.read!(username).friend_list)}
 
-  def get_friend_requests(username), do: User.read!(username).pending_invites
+  def get_friend_requests(username), do: %{response: User.read!(username).pending_invites}
 
   def remove_friend(client, friend) do
     chat_obj = Chat.read!("#{client} #{friend}")
@@ -182,7 +175,6 @@ defmodule Mnesia_storage do
       User.foldl([], fn(rec, _Acc) -> IO.inspect(rec) end)
     end
   end
-  # mix amnesia.create -d Database --disk
 
   defp find_index(arr, key) do
     res = Enum.with_index((arr)) |>
