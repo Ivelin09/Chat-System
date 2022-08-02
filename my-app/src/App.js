@@ -5,6 +5,7 @@ import Register from './pages/register'
 import Home from './pages/home'
 import Login from './pages/login'
 import Friends from './pages/friends'
+import Chats from './pages/messages'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/login" element={<Login/>}/>
         <Route path="/home" element={<Home/>}/>
         <Route path ="/friends" element={<Friends/>}/>
+        <Route path="/messages" element={<Chats/>}/>
       </Routes>
     </BrowserRouter>
   );

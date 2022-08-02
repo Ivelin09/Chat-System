@@ -10,7 +10,6 @@ function App() {
 
   const navigate = useNavigate();
   
-
   async function func() {
 
     const res = await fetch("http://localhost:8080/register", {

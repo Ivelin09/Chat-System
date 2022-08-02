@@ -38,10 +38,10 @@ defmodule Mnesia_storage do
       %Chat{
         name: "#{username} #{friend_username}",
         participations:
-          [
+          Enum.sort_by([
             %People{username: username, last_message_seen: false},
             %People{username: friend_username, last_message_seen: false}
-          ]
+          ], &(&1.username))
         } |> Chat.write
     end
   end
@@ -226,7 +226,8 @@ defmodule Mnesia_storage do
     too_soon = Time.compare(acc.available_time, Time.utc_now)
     cond do
       too_soon == :gt -> %{err: "You should wait"}
-      acc.password == pass -> %{token: acc.auth_token}
+      acc.password == pass ->
+         %{token: acc.auth_token}
       acc.failed_login_attemps == 3 ->
         Amnesia.transaction do
           %{ acc |

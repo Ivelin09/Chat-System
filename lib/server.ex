@@ -16,6 +16,7 @@ defmodule Server do
           {"/login", Elixir.Login, []},
           {"/friend_request/:page", Elixir.Friend_Request, []},
           {"/send_message", Elixir.Send_Message, []},
+          {"/chat/:user", Elixir.Chats, []},
           {"/home", Elixir.Home, []}
         ]}
     ])

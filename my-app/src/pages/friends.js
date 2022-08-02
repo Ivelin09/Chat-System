@@ -52,6 +52,20 @@ function App() {
     return apiRequest.response
   }
 
+  function acceptFriendRequest(username) {
+    console.log("here")
+    let apiRequest = fetch("http://localhost:8080/friend_request/accept", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": localStorage.getItem("token")
+      },
+      body: JSON.stringify({
+        recipient: username
+      })
+    })
+  }
+
   return (
     <div className="" color="color: black">
       <div className="container">
@@ -66,7 +80,7 @@ function App() {
         </div>
         <div className="item-3">
           <h2> pending </h2>
-          {requestList.map(item => <p key={item}>{item}</p>)}
+          {requestList.map(item => <p key={item} onClick={() => acceptFriendRequest(item)}>{item}</p>)}
         </div>
       </div>
       
